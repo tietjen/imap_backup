@@ -1,0 +1,6 @@
+.venv
+emails/
+config.yml
+__pycache__/
+.state/
+.DS_Store

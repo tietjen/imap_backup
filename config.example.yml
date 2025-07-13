@@ -1,0 +1,8 @@
+
+imap_server: "mail.example.com"
+port: 993
+tls: true
+storage_directory: "./emails"
+users:
+  - username: "user.name@example.com"
+    password: "SecurePassword"
