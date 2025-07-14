@@ -100,13 +100,13 @@ class Fetcher:
         status, _ = self.connection.select(mailbox, readonly=True)
         if status != 'OK':
             print(f"Failed to select mailbox {mailbox}")
-            return
+            return 0
 
         # The IMAP search command requires the criteria to be passed as separate arguments
         status, data = self.connection.search(None, *criteria.split())
         if status != 'OK':
             print(f"No messages found in {mailbox} for criteria {criteria}")
-            return
+            return 0
 
         email_ids = data[0].split()
         print(f"Found {len(email_ids)} emails in {mailbox}.")
@@ -151,6 +151,7 @@ class Fetcher:
                                 os.utime(
                                     filepath, (creation_date, creation_date))
                         print(f"Saved email {email_id.decode()} to {filepath}")
+        return len(email_ids)
 
     def close(self):
         """Closes the connection."""

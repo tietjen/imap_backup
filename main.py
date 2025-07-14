@@ -50,10 +50,13 @@ def fetch(
     state = load_state()
     
     current_run_time = datetime.datetime.now(datetime.timezone.utc)
+    
+    overall_stats = {}
 
     for user in config["users"]:
         username = user["username"]
         password = user["password"]
+        user_stats = {"total": 0, "mailboxes": {}}
         
         try:
             fetcher.connect()
@@ -82,11 +85,18 @@ def fetch(
                     else:
                         criteria = "ALL" # First time for this user/mailbox, fetch all
                 else:
-                    print("No fetch option specified. Use --all, --since, or --new.")
-                    continue
+                    # Default to new if no option is specified
+                    last_run_str = state.get(username, {}).get(mailbox)
+                    if last_run_str:
+                        last_run_date = datetime.datetime.fromisoformat(last_run_str).strftime("%d-%b-%Y")
+                        criteria = f'(SINCE "{last_run_date}")'
+                    else:
+                        criteria = "ALL"
 
                 print(f"Fetching emails with criteria: {criteria}")
-                fetcher.fetch_emails(username, storage_dir, mailbox, criteria)
+                num_fetched = fetcher.fetch_emails(username, storage_dir, mailbox, criteria)
+                user_stats["mailboxes"][mailbox] = num_fetched
+                user_stats["total"] += num_fetched
                 
                 user_mailbox_dir = storage_dir / username / mailbox
                 for eml_file in user_mailbox_dir.glob("*.eml"):
@@ -101,6 +111,19 @@ def fetch(
                     state[username] = {}
                 state[username][mailbox] = current_run_time.isoformat()
 
+            # Print user statistics
+            print(f"\n--- Statistics for {username} ---")
+            for mailbox, count in user_stats["mailboxes"].items():
+                print(f"  - {mailbox}: {count} emails synchronized")
+            print(f"  - Total for {username}: {user_stats['total']} emails")
+            print("-----------------------------------\n")
+
+            if username not in overall_stats:
+                overall_stats[username] = {"total": 0, "mailboxes": {}}
+            overall_stats[username]["total"] += user_stats["total"]
+            for mailbox, count in user_stats["mailboxes"].items():
+                 overall_stats[username]["mailboxes"][mailbox] = overall_stats[username]["mailboxes"].get(mailbox, 0) + count
+
         except Exception as e:
             print(f"An error occurred for user {username}: {e}")
         finally:
@@ -108,6 +131,19 @@ def fetch(
 
     indexer.close()
     save_state(state)
+    
+    # Print overall statistics
+    print("\n--- Overall Statistics ---")
+    total_emails_all_users = 0
+    for username, stats in overall_stats.items():
+        print(f"  - User: {username}")
+        for mailbox, count in stats["mailboxes"].items():
+            print(f"    - {mailbox}: {count} emails")
+        print(f"    - Total: {stats['total']} emails")
+        total_emails_all_users += stats["total"]
+    print(f"\n  - Grand Total (all users): {total_emails_all_users} emails synchronized")
+    print("--------------------------\n")
+
     print("Fetch and index process complete.")
 
 
