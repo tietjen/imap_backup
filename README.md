@@ -7,7 +7,9 @@ This is a command-line tool for fetching emails from an IMAP server and searchin
 
 - Fetch emails from one or more accounts on an IMAP server using TLS.
 - Store emails locally in the EML format, mirroring the IMAP folder structure.
+- The filename of the stored email is prefixed with the creation date and the sending date of the email.
 - Fetch all emails, emails since a specific date, or only new emails since the last fetch.
+- Displays a progress bar while processing emails.
 - Search for emails by subject, sender, recipient, content, and attachment name.
 - Configuration is managed through a `config.yml` file.
 
@@ -47,6 +49,8 @@ This is a command-line tool for fetching emails from an IMAP server and searchin
 
 ### Fetching Emails
 
+When fetching emails, a progress bar will be displayed showing the username being processed and the number of files being processed.
+
 -   **Fetch all emails for all users:**
     ```bash
     python main.py fetch --all
@@ -54,7 +58,7 @@ This is a command-line tool for fetching emails from an IMAP server and searchin
 
 -   **Fetch emails received since a specific date:**
     ```bash
-    python main.py fetch --since "2023-01-01"
+    python main.py fetch --since "2025-06-01"
     ```
 
 -   **Fetch new emails since the last run:**

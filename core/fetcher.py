@@ -5,6 +5,9 @@ import email
 import re
 from email.header import decode_header
 from email.utils import parsedate_to_datetime
+import datetime
+import os
+
 
 class Fetcher:
     def __init__(self, server, port, use_tls=True):
@@ -18,7 +21,8 @@ class Fetcher:
         try:
             if self.use_tls:
                 context = ssl.create_default_context()
-                self.connection = imaplib.IMAP4_SSL(self.server, self.port, ssl_context=context)
+                self.connection = imaplib.IMAP4_SSL(
+                    self.server, self.port, ssl_context=context)
             else:
                 self.connection = imaplib.IMAP4(self.server, self.port)
             print(f"Successfully connected to {self.server}")
@@ -45,7 +49,8 @@ class Fetcher:
         header_str = []
         for part, encoding in decoded_parts:
             if isinstance(part, bytes):
-                header_str.append(part.decode(encoding or 'utf-8', errors='replace'))
+                header_str.append(part.decode(
+                    encoding or 'utf-8', errors='replace'))
             else:
                 header_str.append(part)
         return "".join(header_str)
@@ -59,13 +64,13 @@ class Fetcher:
         # Ensure it's not empty
         if not text:
             return "no_subject"
-        return text[:200] # Limit length
+        return text[:200]  # Limit length
 
     def list_mailboxes(self):
         """Lists all mailboxes for the logged-in user."""
         if not self.connection:
             raise ConnectionError("Not connected to the server.")
-        
+
         status, mailboxes = self.connection.list()
         if status == 'OK':
             parsed_mailboxes = []
@@ -113,33 +118,38 @@ class Fetcher:
                     if isinstance(response_part, tuple):
                         msg_bytes = response_part[1]
                         msg = email.message_from_bytes(msg_bytes)
-                        
+
                         subject = self._decode_header(msg["Subject"])
                         date_str = msg.get("Date")
-                        
                         if date_str:
                             dt = parsedate_to_datetime(date_str)
                             date_prefix = dt.strftime('%Y-%m-%d_%H-%M-%S')
+                            creation_date = dt.timestamp()
                         else:
                             date_prefix = "no_date"
-                        
+                            creation_date = None
+
                         if not subject:
                             sanitized_subject = f"email_{email_id.decode()}"
                         else:
-                            sanitized_subject = self._sanitize_filename(subject)
+                            sanitized_subject = self._sanitize_filename(
+                                subject)
 
                         filename_base = f"{date_prefix}_{sanitized_subject}"
                         filename = f"{filename_base}.eml"
                         filepath = mailbox_dir / filename
-                        
+
                         counter = 1
                         while filepath.exists():
                             filename = f"{filename_base}_{counter}.eml"
                             filepath = mailbox_dir / filename
                             counter += 1
-                        
+
                         with open(filepath, 'wb') as f:
                             f.write(msg_bytes)
+                            if creation_date:
+                                os.utime(
+                                    filepath, (creation_date, creation_date))
                         print(f"Saved email {email_id.decode()} to {filepath}")
 
     def close(self):
